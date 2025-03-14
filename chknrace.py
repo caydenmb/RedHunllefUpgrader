@@ -1,159 +1,143 @@
 #!/usr/bin/env python3
-import requests
+import cloudscraper
 import time
 import json
 from flask import Flask, jsonify, render_template
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import threading
 from flask_cors import CORS
 
 # ------------------------------------------------------------------------------------
-# Flask app initialization
+# Flask App Initialization
 # ------------------------------------------------------------------------------------
 app = Flask(__name__)
 CORS(app)
 
 # ------------------------------------------------------------------------------------
-# CONFIGURATION / CONSTANTS
+# Configuration / Constants
 # ------------------------------------------------------------------------------------
+# Upgrader Creator API key and endpoint (per API(1).md documentation)
 UPGRADER_API_KEY = "05204562-cd13-4495-9141-f016f5d32f26"
-
-# The documented endpoint (from API(1).md).
+# Endpoint per the API documentation (POST method)
 UPGRADER_API_ENDPOINT = "https://upgrader.com/affiliate/creator/get-stats"
 
-# Race window: we’ll keep your same times for display purposes,
-# but we will clamp the "to" date if it’s in the future so that
-# we do not violate "Cannot query future dates."
-RACE_START_DATE = "2025-03-13"
-RACE_END_DATE   = "2025-03-21"
+# Race window: (March 13 at 3 AM) to (March 21 at 3 AM)
+# The API will be queried only during the race window.
+RACE_START_DATE = "2025-03-13"  # For the JSON payload "from"
+RACE_END_DATE   = "2025-03-21"  # For the JSON payload "to"
 
-# We also store the exact times for the countdown, etc.
+# Fixed times for 3:00 AM UTC on start and end dates
 RACE_START_TIME = datetime(2025, 3, 13, 3, 0, 0)
 RACE_END_TIME   = datetime(2025, 3, 21, 3, 0, 0)
 
-# Cache for top wagers
+# Data cache for storing parsed “top wagerers”
 data_cache = {}
 
 # ------------------------------------------------------------------------------------
-# LOGGING UTILITY
+# Logging Utility Function
 # ------------------------------------------------------------------------------------
 def log_message(level, message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] [{level.upper()}]: {message}")
 
 # ------------------------------------------------------------------------------------
-# FETCHING FROM UPGRADER
+# Function to fetch data from Upgrader API using cloudscraper
 # ------------------------------------------------------------------------------------
-def fetch_data_from_upgrader():
-    """
-    Attempts to call the /affiliate/creator/get-stats API with a JSON POST body.
-    Must not include any future date for 'to' or it can fail.
-    """
+def fetch_data_from_api():
     global data_cache
-
-    now_utc = datetime.utcnow()
-
-    # If it’s before the race starts, we can just say "Not started."
-    if now_utc < RACE_START_TIME:
-        log_message("info", "Wager race not started yet.")
-        data_cache = {"error": "Race not started yet."}
-        return
-
-    # If race is over, we can simply say "Ended."
-    if now_utc > RACE_END_TIME:
-        log_message("info", "Wager race ended.")
-        data_cache = {"error": "Race ended."}
-        return
-
-    # According to the doc: "Cannot query future dates."
-    # So if RACE_END_DATE is beyond 'today', clamp it to today’s date in YYYY-MM-DD
-    today_str = datetime.utcnow().strftime("%Y-%m-%d")
-    if RACE_END_DATE > today_str:
-        # Force the 'to' field to be "today" so we don't break the rule
-        valid_to_date = today_str
-    else:
-        valid_to_date = RACE_END_DATE
-
-    payload = {
-        "apikey": UPGRADER_API_KEY,
-        "from": RACE_START_DATE,
-        "to":   valid_to_date
-    }
-
-    # Make sure to send JSON with correct headers.
-    headers = {
-        "Content-Type": "application/json"
-    }
-
-    # Attempt the POST request
     try:
-        log_message("info", f"[Attempting POST] {UPGRADER_API_ENDPOINT} with {payload}")
-        resp = requests.post(
-            UPGRADER_API_ENDPOINT,
-            json=payload,             # ensures it’s sent as JSON
-            headers=headers,
-            timeout=15
-        )
+        now_utc = datetime.utcnow()
 
-        if resp.status_code == 200:
-            resp_json = resp.json()
-            # Check if the API itself indicates an error:
-            if resp_json.get("error", True) is True:
-                # The API says: error = true
-                msg = resp_json.get("msg", "Unknown API error")
-                log_message("error", f"Upgrader responded with an error: {msg}")
-                data_cache = {"error": msg}
-            else:
-                # Parse the data
-                data = resp_json.get("data", {})
-                summarized = data.get("summarizedBets", [])
+        # Check if race hasn't started or has ended
+        if now_utc < RACE_START_TIME:
+            log_message("info", "Wager race has NOT started yet.")
+            data_cache = {"error": "Race not started yet."}
+            return
+        if now_utc > RACE_END_TIME:
+            log_message("info", "Wager race has ENDED.")
+            data_cache = {"error": "Race ended."}
+            return
 
-                # Sort them in descending order by "wager"
-                sorted_bets = sorted(
-                    summarized,
-                    key=lambda i: i.get("wager", 0),
-                    reverse=True
-                )
+        # The API does not allow future dates. Clamp the "to" date if necessary.
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        valid_to_date = RACE_END_DATE if RACE_END_DATE <= today_str else today_str
 
-                # Convert the top 11 to your standard dictionary
-                top_entries = {}
-                for index, item in enumerate(sorted_bets[:11], start=1):
-                    username = item.get("user", {}).get("username", f"Player{index}")
-                    cents_wager = item.get("wager", 0)
-                    dollars_str = f"${cents_wager/100:,.2f}"
-                    top_entries[f"top{index}"] = {
-                        "username": username,
-                        "wager": dollars_str
-                    }
-                # If fewer than 11 found, fill placeholders
-                if len(sorted_bets) < 11:
-                    for j in range(len(sorted_bets)+1, 12):
-                        top_entries[f"top{j}"] = {
-                            "username": f"Player{j}",
-                            "wager": "$0.00"
-                        }
+        # Build payload as specified in the documentation.
+        payload = {
+            "apikey": UPGRADER_API_KEY,
+            "from": RACE_START_DATE,
+            "to": valid_to_date
+        }
 
-                data_cache = top_entries
-                log_message("info", f"Data cache updated with {len(top_entries)} top entries.")
-        else:
-            # If not 200, log + store error
-            log_message("error", f"HTTP {resp.status_code} => {resp.text[:300]}")
-            data_cache = {"error": f"HTTP {resp.status_code} from Upgrader."}
+        log_message("info", f"[Attempting POST] {UPGRADER_API_ENDPOINT} with {json.dumps(payload)}")
 
+        # Create a cloudscraper session (bypasses Cloudflare protection)
+        scraper = cloudscraper.create_scraper()  # cloudscraper acts like requests.Session()
+
+        # Set headers to mimic a common browser; these help bypass Cloudflare restrictions.
+        headers = {
+            "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                           "(KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"),
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        # Make the POST request with the JSON payload and custom headers.
+        response = scraper.post(UPGRADER_API_ENDPOINT, json=payload, headers=headers, timeout=15)
+
+        # Check for HTTP status code; if not 200, log error and update data cache.
+        if response.status_code != 200:
+            log_message("error", f"HTTP {response.status_code} => {response.text}")
+            data_cache = {"error": f"HTTP {response.status_code} from Upgrader."}
+            return
+
+        # Parse the JSON response from Upgrader.
+        resp_json = response.json()
+        log_message("debug", f"Raw Upgrader API response: {json.dumps(resp_json)}")
+
+        # If API indicates an error, capture and log it.
+        if resp_json.get("error", True):
+            msg = resp_json.get("msg", "Unknown API error")
+            log_message("error", f"Upgrader API responded with an error: {msg}")
+            data_cache = {"error": msg}
+            return
+
+        # Extract the summarized bets array and sort it by wager amount (descending).
+        data_section = resp_json.get("data", {})
+        summarized_bets = data_section.get("summarizedBets", [])
+        sorted_bets = sorted(summarized_bets, key=lambda item: item.get("wager", 0), reverse=True)
+
+        # Build dictionary for top 11 wagerers
+        top_entries = {}
+        for i, entry in enumerate(sorted_bets[:11], start=1):
+            username = entry.get("user", {}).get("username", f"Player{i}")
+            wager_cents = entry.get("wager", 0)
+            # Convert cents to dollars and format with two decimals and commas.
+            wager_str = f"${(wager_cents / 100):,.2f}"
+            top_entries[f"top{i}"] = {"username": username, "wager": wager_str}
+
+        # Fill in placeholders if there are fewer than 11 entries.
+        for j in range(len(sorted_bets) + 1, 12):
+            top_entries[f"top{j}"] = {"username": f"Player{j}", "wager": "$0.00"}
+
+        data_cache = top_entries
+        log_message("info", f"Data cache updated with {len(top_entries)} entries.")
     except Exception as ex:
-        log_message("error", f"Exception calling Upgrader: {ex}")
+        log_message("error", f"Exception during API call: {ex}")
         data_cache = {"error": str(ex)}
 
+# ------------------------------------------------------------------------------------
+# Schedule Data Fetching (Immediately and then every 90 seconds)
+# ------------------------------------------------------------------------------------
 def schedule_data_fetch():
-    """
-    Fetch immediately, then schedule again in 90 seconds.
-    """
-    fetch_data_from_upgrader()
+    # Immediately fetch data on server boot
+    fetch_data_from_api()
+    # Then schedule periodic fetches every 90 seconds
     threading.Timer(90, schedule_data_fetch).start()
 
 # ------------------------------------------------------------------------------------
-# FLASK ROUTES
+# Flask Routes
 # ------------------------------------------------------------------------------------
 @app.route("/data")
 def get_data():
@@ -171,10 +155,11 @@ def page_not_found(e):
     return render_template("404.html"), 404
 
 # ------------------------------------------------------------------------------------
-# MAIN EXECUTION
+# Start Scheduled Data Fetching and Flask Server
 # ------------------------------------------------------------------------------------
+schedule_data_fetch()
+
 if __name__ == "__main__":
-    schedule_data_fetch()
     port = int(os.getenv("PORT", 8080))
     log_message("info", f"Starting Flask server on port {port}")
     app.run(host="0.0.0.0", port=port)
