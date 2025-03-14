@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Redhunllef Livestream</title>
+  <title>Upgrader.com Wager Race</title> <!-- Updated title -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- Favicon -->
@@ -287,7 +287,7 @@
 
   <!-- JavaScript for data, prizes, and countdown -->
   <script>
-    // Prize structure: 1st -> $300, 2nd/3rd -> $100, 4th -> $50, 5th/6th -> $25
+    // Prize structure for top 6
     const prizeMapping = {
       1: "$300",
       2: "$100",
@@ -297,7 +297,7 @@
       6: "$25"
     };
 
-    // Placeholder data in case the API is not available or returns an error
+    // Fallback placeholders
     const placeholderData = {
       top1:  { username: 'Player1',  wager: '$10,000' },
       top2:  { username: 'Player2',  wager: '$8,500' },
@@ -312,7 +312,6 @@
       top11: { username: 'Player11', wager: '$3,500' }
     };
 
-    // Build the top 3 podium HTML with prizes
     function buildPodiumHTML([first, second, third]) {
       return `
         <div class="second">
@@ -336,29 +335,22 @@
       `;
     }
 
-    // Insert data into podium and other standings
     function populateWithData(data) {
       const top3Container = document.getElementById('top-3-standings');
       const standingsContainer = document.getElementById('wager-standings');
 
-      // Clear existing
       top3Container.innerHTML = '';
       standingsContainer.innerHTML = '';
 
-      // Extract top 3
       const first = data.top1 || placeholderData.top1;
       const second = data.top2 || placeholderData.top2;
       const third = data.top3 || placeholderData.top3;
 
-      // Build podium
       top3Container.innerHTML = buildPodiumHTML([first, second, third]);
 
-      // 4th to 11th
       for (let i = 4; i <= 11; i++) {
         const rank = data[`top${i}`] || placeholderData[`top${i}`];
-        const placeText = (i <= 6)
-          ? `<p>Prize: ${prizeMapping[i] || '—'}</p>`
-          : '';
+        const placeText = (i <= 6) ? `<p>Prize: ${prizeMapping[i] || '—'}</p>` : '';
 
         const div = document.createElement('div');
         div.classList.add('standing');
@@ -371,14 +363,12 @@
       }
     }
 
-    // Fetch data from /data endpoint and populate
     function updateWagerRace() {
       fetch('/data')
         .then(res => res.json())
         .then(apiData => {
-          console.log('Fetched data from /data:', apiData);
+          console.log('Fetched from /data:', apiData);
           if (apiData.error) {
-            // If the server says "Race not started/ended" or any other error
             populateWithData(placeholderData);
           } else {
             populateWithData(apiData);
@@ -390,13 +380,12 @@
         });
     }
 
-    // Countdown to March 21, 2025 @ 3:00 AM UTC
     function initializeCountdown() {
       const countdownElement = document.getElementById('countdown');
       const raceEnd = new Date('Mar 21, 2025 03:00:00 UTC').getTime();
 
-      function updateCountdown() {
-        const now = new Date().getTime();
+      function tick() {
+        const now = Date.now();
         const distance = raceEnd - now;
 
         if (distance < 0) {
@@ -412,11 +401,10 @@
         countdownElement.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
       }
 
-      updateCountdown();
-      setInterval(updateCountdown, 1000); // Update every second
+      tick();
+      setInterval(tick, 1000);
     }
 
-    // Starry background generation
     function createStars() {
       const starsContainer = document.querySelector('.stars-overlay');
       const starsCount = 350;
@@ -432,7 +420,6 @@
         stars.push(star);
       }
 
-      // Parallax effect on desktop
       if (window.innerWidth > 768) {
         window.addEventListener('mousemove', e => {
           const { clientX, clientY } = e;
@@ -445,13 +432,12 @@
       }
     }
 
-    // On page load
     window.onload = function() {
       createStars();
       initializeCountdown();
       updateWagerRace();
 
-      // Refresh the data every 15 minutes
+      // Refresh scoreboard every 15 minutes
       setInterval(updateWagerRace, 900000);
     };
   </script>
