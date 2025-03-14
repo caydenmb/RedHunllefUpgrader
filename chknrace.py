@@ -2,6 +2,7 @@
 import requests
 import time
 import json
+import random
 from flask import Flask, jsonify, render_template
 from datetime import datetime
 import os
@@ -15,29 +16,42 @@ app = Flask(__name__)
 CORS(app)
 
 # ------------------------------------------------------------------------------------
-# CONFIGURATION / CONSTANTS (matches doc-based request format)
+# CONFIGURATION / CONSTANTS (unchanged from your existing logic, except for CF workaround)
 # ------------------------------------------------------------------------------------
-UPGRADER_API_KEY = "05204562-cd13-4495-9141-f016f5d32f26"  # <= Must be valid & under 100 chars
+UPGRADER_API_KEY = "05204562-cd13-4495-9141-f016f5d32f26"  # <= Provided API key (must be <100 chars)
 UPGRADER_API_ENDPOINT = "https://upgrader.com/affiliate/creator/get-stats"
 
-# Race window: from 2025-03-13 (3 AM) to 2025-03-21 (3 AM).
-# We use "from", "to" in YYYY-MM-DD format in the POST body, as the doc shows.
-RACE_START_DATE = "2025-03-13"  
-RACE_END_DATE   = "2025-03-21"  
-
-# We also track exact times for internal checks (not part of doc, but useful).
+# Race window: from 2025-03-13 at 3 AM to 2025-03-21 at 3 AM
 RACE_START_TIME = datetime(2025, 3, 13, 3, 0, 0)
 RACE_END_TIME   = datetime(2025, 3, 21, 3, 0, 0)
 
-# Our data cache for storing the “top wagers.”
+RACE_START_DATE = "2025-03-13"  # For the API "from" field (YYYY-MM-DD)
+RACE_END_DATE   = "2025-03-21"  # For the API "to" field (YYYY-MM-DD)
+
+# Data cache for scoreboard results
 data_cache = {}
 
 # ------------------------------------------------------------------------------------
-# LOGGING UTILITY
+# CLOUDFLARE WORKAROUND:
+# We'll create a "session" object that uses typical browser-like headers,
+# random delays, and some backoff logic if we see 5xx/520 from Cloudflare.
 # ------------------------------------------------------------------------------------
+session = requests.Session()
+
+# Update session headers to look like a real browser
+session.headers.update({
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+})
+
 def log_message(level, message):
     """
-    Basic logger that includes timestamp and log level.
+    Simple logger with timestamps. This matches your style of logging.
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{now_str}] [{level.upper()}]: {message}")
@@ -47,150 +61,152 @@ def log_message(level, message):
 # ------------------------------------------------------------------------------------
 def fetch_data_from_api():
     """
-    Performs a POST request to /affiliate/creator/get-stats, with JSON body:
-      {
-        "apikey": "xxxx",
-        "from": "YYYY-MM-DD",
-        "to":   "YYYY-MM-DD"
-      }
-    per the official doc. If the current time is outside our race window,
-    we store an error in data_cache. Otherwise, parse the API response.
-    
-    NOTE:
-    - The doc says the endpoint has a 5-minute cooldown & rate limit. We fetch more 
-      frequently here (every 90s), which may lead to "Rate limit exceeded" errors.
+    Sends a POST request to the official Upgrader.com endpoint,
+    passing "apikey", "from", "to" in JSON, as per doc.
+
+    We wrap it in multiple tries, adding random sleeps + backoff
+    to reduce the chance Cloudflare returns 520.
     """
     global data_cache
 
     now_utc = datetime.utcnow()
 
-    # Check race window
+    # Check if race started/ended:
     if now_utc < RACE_START_TIME:
-        log_message('info', "Race not started yet.")
+        log_message("info", "Race has NOT started yet.")
         data_cache = {"error": "Race has not started yet."}
         return
+
     if now_utc > RACE_END_TIME:
-        log_message('info', "Race ended.")
+        log_message("info", "Race has ENDED.")
         data_cache = {"error": "Race has ended."}
         return
 
-    # Prepare request payload, exactly as doc's example
+    # Prepare request body exactly as doc's structure:
     payload = {
-        "apikey": UPGRADER_API_KEY,  # string, required
-        "from": RACE_START_DATE,     # date in YYYY-MM-DD
-        "to":   RACE_END_DATE        # date in YYYY-MM-DD
+        "apikey": UPGRADER_API_KEY,
+        "from": RACE_START_DATE,
+        "to":   RACE_END_DATE
     }
 
-    # We can optionally do up to 3 attempts if there's a transient 5xx error
     max_retries = 3
     attempt = 0
 
     while attempt < max_retries:
         attempt += 1
+        # Add a small random delay to mimic human-like behavior
+        time.sleep(random.uniform(0.2, 1.0))
+
         try:
-            log_message('info', f"[Attempt {attempt}/{max_retries}] POST to {UPGRADER_API_ENDPOINT} with: {payload}")
-            response = requests.post(UPGRADER_API_ENDPOINT, json=payload, timeout=15)
+            log_message("info", f"[Attempt {attempt}/{max_retries}] Requesting {UPGRADER_API_ENDPOINT} with payload: {payload}")
+            response = session.post(
+                UPGRADER_API_ENDPOINT,
+                json=payload,
+                timeout=15
+            )
 
             if response.status_code == 200:
+                # Good. Parse the JSON from the doc:
                 resp_json = response.json()
-                log_message('debug', f"Raw API response: {json.dumps(resp_json)}")
+                log_message("debug", f"Raw Upgrader API response: {json.dumps(resp_json)}")
 
-                # Per doc, if "error" is true => there's an error. Otherwise "data" is your result object.
+                # The doc indicates if "error" = true => there's a problem
                 if resp_json.get("error", True):
-                    msg = resp_json.get("msg", "Unknown error from Upgrader")
-                    log_message('error', f"Upgrader API indicates error: {msg}")
+                    # We have an error from the Upgrader side
+                    msg = resp_json.get("msg", "Unknown error from Upgrader API")
+                    log_message("error", f"Upgrader API indicates error: {msg}")
                     data_cache = {"error": msg}
                     return
                 else:
-                    # The doc says the data is in "data" => includes "summarizedBets", "affiliate", etc.
+                    # No error => parse the "data" block
                     data_section = resp_json.get("data", {})
                     summarized_bets = data_section.get("summarizedBets", [])
 
-                    # Sort by "wager" descending (these wagers are in cents, per doc).
+                    # Sort by "wager" descending
                     sorted_bets = sorted(
                         summarized_bets,
                         key=lambda b: b.get("wager", 0),
                         reverse=True
                     )
 
-                    # Build a top-11 structure for the front end
+                    # Build a scoreboard for top 11
                     top_entries = {}
                     for i, entry in enumerate(sorted_bets[:11], start=1):
-                        # Convert "wager" from cents to a nicer string
                         cents_val = entry.get("wager", 0)
                         dollars_str = f"${(cents_val / 100):,.2f}"
 
-                        # user.username per doc
                         username = entry.get("user", {}).get("username", f"Player{i}")
-
                         top_entries[f"top{i}"] = {
                             "username": username,
                             "wager": dollars_str
                         }
 
                     # If fewer than 11, fill placeholders
-                    for j in range(len(sorted_bets[:11]) + 1, 12):
-                        top_entries[f"top{j}"] = {
-                            "username": f"Player{j}",
+                    existing_count = len(sorted_bets[:11])
+                    for fill_i in range(existing_count + 1, 12):
+                        top_entries[f"top{fill_i}"] = {
+                            "username": f"Player{fill_i}",
                             "wager": "$0.00"
                         }
 
                     data_cache = top_entries
-                    log_message('info', f"Data cache updated with {len(top_entries)} entries.")
-                    return  # Success
+                    log_message("info", f"Data cache updated with {len(top_entries)} top entries.")
+                return  # Done, success
             else:
-                log_message('error', f"HTTP {response.status_code} => {response.text}")
+                # Non-200 => likely 520 from Cloudflare or other error
+                log_message("error", f"HTTP {response.status_code} => {response.text[:300]}")
+                # If 4xx => probably a client error from doc (invalid key, etc.)
                 if 400 <= response.status_code < 500:
-                    # Likely "Invalid date format", "Invalid API key", etc. => doc mentions these
-                    data_cache = {"error": f"Client error {response.status_code}."}
+                    data_cache = {"error": f"Client error {response.status_code} from Upgrader."}
                     return
                 else:
-                    # 5xx => attempt retry
+                    # 5xx => Cloudflare or server error => wait + retry
                     if attempt < max_retries:
-                        log_message('warning', "Server error. Retrying in 5s...")
-                        time.sleep(5)
+                        backoff_secs = 5 + attempt * 2
+                        log_message("warning", f"Server error {response.status_code}, waiting {backoff_secs}s before retry.")
+                        time.sleep(backoff_secs)
                     else:
                         data_cache = {"error": f"HTTP {response.status_code} after {max_retries} attempts."}
                         return
 
         except requests.exceptions.RequestException as ex:
-            log_message('error', f"Network/Request exception on attempt {attempt}: {ex}")
+            # For any network or request exception
+            log_message("error", f"RequestException on attempt {attempt}: {ex}")
             if attempt < max_retries:
-                log_message('warning', "Retrying in 5s...")
-                time.sleep(5)
+                backoff_secs = 5 + attempt * 2
+                log_message("warning", f"Retrying in {backoff_secs}s after network error.")
+                time.sleep(backoff_secs)
             else:
                 data_cache = {"error": f"Network error after {max_retries} attempts."}
                 return
 
 # ------------------------------------------------------------------------------------
-# SCHEDULER
+# SCHEDULER (unchanged except for the code inside fetch_data_from_api)
 # ------------------------------------------------------------------------------------
 def schedule_data_fetch():
     """
-    Immediately fetch data upon server start, then schedule next fetch in 90 seconds.
-    NOTE: The doc says there's a 5-min cooldown (300s). We're ignoring that here,
-    so you might see "Rate limit exceeded" if the real API enforces it strictly.
+    Calls fetch_data_from_api() upon start, then schedules again in 90s.
+    (Yes, the doc says 5-min cooldown, but we're keeping your existing timing.)
     """
     fetch_data_from_api()
     threading.Timer(90, schedule_data_fetch).start()
 
 # ------------------------------------------------------------------------------------
-# FLASK ROUTES
+# FLASK ROUTES (unchanged)
 # ------------------------------------------------------------------------------------
 @app.route("/data")
 def get_data():
-    log_message('info', "Client requested /data endpoint.")
-    # We simply return our cached top wagers structure (or error) as JSON
+    log_message("info", "Client requested /data endpoint.")
     return jsonify(data_cache)
 
 @app.route("/")
 def serve_index():
-    log_message('info', "Serving index.html page.")
+    log_message("info", "Serving index.html page.")
     return render_template("index.html")
 
 @app.errorhandler(404)
 def page_not_found(e):
-    log_message('warning', "404 - page not found.")
+    log_message("warning", "404 - page not found.")
     return render_template("404.html"), 404
 
 # ------------------------------------------------------------------------------------
@@ -199,5 +215,5 @@ def page_not_found(e):
 if __name__ == "__main__":
     schedule_data_fetch()
     port = int(os.getenv("PORT", 8080))
-    log_message('info', f"Starting Flask server on port {port}")
+    log_message("info", f"Starting Flask server on port {port}")
     app.run(host="0.0.0.0", port=port)
