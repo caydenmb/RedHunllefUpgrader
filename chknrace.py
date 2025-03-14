@@ -57,8 +57,7 @@ def fetch_data_from_api():
     We'll only do this if the current UTC time is within our race window.
     Otherwise, store a simple "error" in data_cache for the front-end.
 
-    NEW: We added a short retry loop (up to 3 attempts) for any 5xx response
-    or RequestException, to handle intermittent Cloudflare errors.
+    We also have a short retry loop (up to 3 attempts) for 5xx or network errors.
     """
     global data_cache
 
@@ -93,76 +92,74 @@ def fetch_data_from_api():
             log_message('info', f"[Attempt {attempt}/{max_retries}] Requesting {UPGRADER_API_ENDPOINT} with payload: {payload}")
             response = requests.post(UPGRADER_API_ENDPOINT, json=payload, timeout=15)
 
-            # If server didn't return 200 OK, see if we should retry or not
             if response.status_code == 200:
                 # Parse JSON
                 resp_json = response.json()
                 log_message('debug', f"Raw Upgrader API response: {json.dumps(resp_json)}")
 
-                # If "error" is True in the response, the API indicates a problem
+                # If "error" is True, the API indicates a problem
                 if resp_json.get("error", True):
                     msg = resp_json.get("msg", "Unknown error from Upgrader")
                     log_message('error', f"Upgrader API indicates error: {msg}")
                     data_cache = {"error": msg}
                     return
-                # Otherwise parse the "summarizedBets"
-                data_section = resp_json.get("data", {})
-                summarized_bets = data_section.get("summarizedBets", [])
+                else:
+                    # Parse the "summarizedBets"
+                    data_section = resp_json.get("data", {})
+                    summarized_bets = data_section.get("summarizedBets", [])
 
-                # Sort by "wager" descending; "wager" is in cents
-                sorted_bets = sorted(
-                    summarized_bets,
-                    key=lambda item: item.get("wager", 0),
-                    reverse=True
-                )
+                    # Sort by "wager" descending; "wager" is in cents
+                    sorted_bets = sorted(
+                        summarized_bets,
+                        key=lambda item: item.get("wager", 0),
+                        reverse=True
+                    )
 
-                # Build a dictionary for top 11 (1..11)
-                top_entries = {}
-                for i, entry in enumerate(sorted_bets[:11], start=1):
-                    cents = entry.get("wager", 0)
-                    dollars_str = f"${(cents / 100):,.2f}"
-                    username = entry.get("user", {}).get("username", f"Player{i}")
-                    top_entries[f"top{i}"] = {
-                        "username": username,
-                        "wager": dollars_str
-                    }
-
-                # Fill placeholders for missing ranks if fewer than 11
-                total_in_sorted = len(sorted_bets[:11])
-                if total_in_sorted < 11:
-                    for j in range(total_in_sorted + 1, 12):
-                        top_entries[f"top{j}"] = {
-                            "username": f"Player{j}",
-                            "wager": "$0.00"
+                    # Build a dictionary for top 11 (1..11)
+                    top_entries = {}
+                    for i, entry in enumerate(sorted_bets[:11], start=1):
+                        cents = entry.get("wager", 0)
+                        dollars_str = f"${(cents / 100):,.2f}"
+                        username = entry.get("user", {}).get("username", f"Player{i}")
+                        top_entries[f"top{i}"] = {
+                            "username": username,
+                            "wager": dollars_str
                         }
 
-                # Update the data cache and done
-                data_cache = top_entries
-                log_message('info', f"Data cache updated with {len(top_entries)} top entries.")
-                return
+                    # Fill placeholders for missing ranks if fewer than 11
+                    total_in_sorted = len(sorted_bets[:11])
+                    if total_in_sorted < 11:
+                        for j in range(total_in_sorted + 1, 12):
+                            top_entries[f"top{j}"] = {
+                                "username": f"Player{j}",
+                                "wager": "$0.00"
+                            }
+
+                    data_cache = top_entries
+                    log_message('info', f"Data cache updated with {len(top_entries)} top entries.")
+                    return  # Done
 
             else:
-                # Non-200 response => possibly 5xx or 4xx
+                # Non-200 => possibly 5xx or 4xx
                 log_message('error', f"HTTP {response.status_code} => {response.text}")
 
                 if 400 <= response.status_code < 500:
-                    # If it's 4xx, it's a client error => do not retry further
-                    data_cache = {"error": f"Client error {response.status_code}. Check API key or request."}
+                    # 4xx => client error => do not retry
+                    data_cache = {"error": f"Client error {response.status_code}. Check request."}
                     return
                 else:
-                    # 5xx error => attempt retry if not at max
+                    # 5xx => attempt retry if not at max
                     if attempt < max_retries:
-                        log_message('warning', f"Will retry after short delay (5s).")
+                        log_message('warning', "Will retry in 5s...")
                         time.sleep(5)
                     else:
                         data_cache = {"error": f"HTTP {response.status_code} after {max_retries} attempts."}
                         return
 
         except requests.exceptions.RequestException as ex:
-            # Network / request error => can retry up to max_retries
             log_message('error', f"Network error on attempt {attempt}: {str(ex)}")
             if attempt < max_retries:
-                log_message('warning', "Retrying after 5s delay...")
+                log_message('warning', "Retrying in 5s...")
                 time.sleep(5)
             else:
                 data_cache = {"error": f"Network error after {max_retries} attempts."}
@@ -170,10 +167,10 @@ def fetch_data_from_api():
 
 def schedule_data_fetch():
     """
-    Schedule periodic calls to fetch_data_from_api() every 5 minutes.
+    Calls fetch_data_from_api() immediately, then schedules it every 90 seconds.
     """
-    fetch_data_from_api()
-    threading.Timer(300, schedule_data_fetch).start()  # 300 seconds = 5 minutes
+    fetch_data_from_api()  # Immediate fetch on server boot
+    threading.Timer(90, schedule_data_fetch).start()  # Next fetch in 90 seconds
 
 # ------------------------------------------------------------------------------------
 # FLASK ROUTES
