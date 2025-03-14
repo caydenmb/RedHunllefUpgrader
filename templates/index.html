@@ -295,7 +295,6 @@
       4: "$50",
       5: "$25",
       6: "$25"
-      // 7+ have no listed prizes
     };
 
     // Placeholder data in case the API is not available or returns an error
@@ -379,7 +378,7 @@
         .then(apiData => {
           console.log('Fetched data from /data:', apiData);
           if (apiData.error) {
-            // If the server says "Race not started" or "ended" or an actual error
+            // If the server says "Race not started/ended" or any other error
             populateWithData(placeholderData);
           } else {
             populateWithData(apiData);
