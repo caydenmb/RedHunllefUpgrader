@@ -1,410 +1,462 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <!-- CHANGED THIS TITLE FROM "Redhunllef Livestream" TO "Upgrader.com Wager Race" -->
-    <title>Upgrader.com Wager Race</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta charset="UTF-8">
+  <title>Upgrader.com Wager Race</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Favicon (Logo) -->
-    <link rel="icon" href="/static/redlogo.png" type="image/png">
-    
-    <!-- Google Fonts (Roboto for sleek typography) -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Favicon (Logo) -->
+  <link rel="icon" href="/static/redlogo.png" type="image/png">
 
-    <!-- Main Styles -->
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <!-- Google Fonts (Roboto) -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #3a3a3a;
-            color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            text-align: center;
-            overflow-y: auto;
-            padding: 15px;
-            position: relative;
-        }
+  <style>
+    /* Basic reset and universal styling */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #3a3a3a;
+      color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+      overflow-y: auto;
+      padding: 15px;
+      position: relative;
+    }
 
-        header img {
-            width: 225px;
-            height: auto;
-            animation: bounce 0.6s infinite ease-in-out;
-            margin-bottom: 30px;
-        }
+    .container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      width: 100%;
+      max-width: 1200px;
+    }
 
-        @keyframes bounce {
-            0%, 100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-15px);
-            }
-        }
+    header img {
+      width: 225px;
+      height: auto;
+      animation: bounce 0.6s infinite ease-in-out;
+      margin-bottom: 30px;
+    }
 
-        .button-container {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-        }
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-15px);
+      }
+    }
 
-        .button {
-            padding: 17px 44px;
-            background-color: #ff2d2d;
-            color: #fff;
-            font-weight: bold;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1.5rem;
-            text-align: center;
-            max-width: 230px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    .button-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 
-        .button:hover {
-            background-color: #cc2424;
-        }
+    .button {
+      padding: 17px 44px;
+      background-color: #ff2d2d;
+      color: #fff;
+      font-weight: bold;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 1.5rem;
+      text-align: center;
+      max-width: 230px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-        .wager-container {
-            margin-top: 50px;
-            width: 100%;
-            text-align: center;
-        }
+    .button:hover {
+      background-color: #cc2424;
+    }
 
-        .wager-title {
-            font-size: 2rem;
-            margin-bottom: 25px;
-        }
+    .wager-container {
+      margin-top: 50px;
+      width: 100%;
+      text-align: center;
+    }
 
-        /* Podium style for top 3 */
-        .podium {
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            gap: 40px;
-            margin-bottom: 40px;
-        }
+    .wager-title {
+      font-size: 2rem;
+      margin-bottom: 25px;
+    }
 
-        .medal {
-            width: 75px;
-            height: auto;
-            margin-bottom: 10px;
-        }
+    .podium {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
 
-        .first-medal {
-            width: 112px; /* 50% larger for 1st place */
-        }
+    .medal {
+      width: 75px;
+      height: auto;
+      margin-bottom: 10px;
+    }
 
-        .podium div {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: bold;
-            color: #fff;
-            background-color: #444;
-            box-sizing: border-box;
-            font-size: 107%; /* Increased font size by 7% for podium places */
-        }
+    .first-medal {
+      width: 112px;
+    }
 
-        .podium div h3 {
-            margin-bottom: 10px; /* Small spacer between username and wager */
-        }
+    .podium div {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
+      color: #fff;
+      background-color: #444;
+      box-sizing: border-box;
+      font-size: 107%;
+    }
 
-        /* Styling for podium heights */
-        .first {
-            background-color: gold;
-            height: 270px;
-            width: 220px;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 1);
-            text-shadow: 2px 2px 10px rgba(255, 215, 0, 1);
-        }
+    .podium div h3 {
+      margin-bottom: 10px;
+    }
 
-        .second {
-            background-color: silver;
-            height: 220px;
-            width: 180px;
-            box-shadow: 0 0 15px rgba(192, 192, 192, 1);
-            text-shadow: 2px 2px 10px rgba(192, 192, 192, 1);
-        }
+    .first {
+      background-color: gold;
+      height: 270px;
+      width: 220px;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 1);
+      text-shadow: 2px 2px 10px rgba(255, 215, 0, 1);
+    }
 
-        .third {
-            background-color: #cd7f32;
-            height: 200px;
-            width: 180px;
-            box-shadow: 0 0 15px rgba(205, 127, 50, 1);
-            text-shadow: 2px 2px 10px rgba(205, 127, 50, 1);
-        }
+    .second {
+      background-color: silver;
+      height: 220px;
+      width: 180px;
+      box-shadow: 0 0 15px rgba(192, 192, 192, 1);
+      text-shadow: 2px 2px 10px rgba(192, 192, 192, 1);
+    }
 
-        .other-standings {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 38px;
-            justify-items: center;
-            margin-bottom: 10px;
-        }
+    .third {
+      background-color: #cd7f32;
+      height: 200px;
+      width: 180px;
+      box-shadow: 0 0 15px rgba(205, 127, 50, 1);
+      text-shadow: 2px 2px 10px rgba(205, 127, 50, 1);
+    }
 
-        .standing {
-            background-color: #444;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            width: 180px; /* Fixed width */
-            height: 120px; /* Fixed height */
-            font-size: 1rem;
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-            overflow-wrap: break-word; /* Ensure long text wraps inside the box */
-            display: flex;
-            flex-direction: column;
-            justify-content: center; /* Center text vertically */
-            align-items: center; /* Center text horizontally */
-        }
+    .other-standings {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 38px;
+      justify-items: center;
+      margin-bottom: 10px;
+    }
 
-        .standing h3 {
-            font-size: 1.2rem;
-            margin-bottom: 5px;
-            color: #ff2d2d;
-            font-weight: bold;
-        }
+    .standing {
+      background-color: #444;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+      width: 180px;
+      height: 120px;
+      font-size: 1rem;
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      overflow-wrap: break-word;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
 
-        .standing p {
-            font-size: 1rem;
-            margin: 0;
-            color: #fff;
-        }
+    .standing h3 {
+      font-size: 1.2rem;
+      margin-bottom: 5px;
+      color: #ff2d2d;
+      font-weight: bold;
+    }
 
-        /* Footer styling, including built-by reference */
-        footer {
-            margin-top: 30px;
-            font-size: 0.8rem;
-            color: #888;
-            text-align: center;
-        }
+    .standing p {
+      font-size: 1rem;
+      margin: 0;
+      color: #fff;
+    }
 
-        footer p {
-            margin: 5px 0;
-        }
+    #race-timer {
+      font-size: 1.5rem;
+      margin: 15px auto 25px auto;
+    }
 
-        footer a {
-            color: #ff2d2d;
-            text-decoration: none;
-        }
+    footer {
+      margin-top: 30px;
+      font-size: 0.8rem;
+      color: #888;
+      text-align: center;
+    }
 
-        footer a:hover {
-            text-decoration: underline;
-        }
+    footer p {
+      margin: 5px 0;
+    }
 
-        @media (max-width: 768px) {
-            header img { width: 180px; }
-            .button-container { flex-direction: column; gap: 15px; }
-            .button { font-size: 1.3rem; padding: 16px 42px; max-width: 100%; }
-            .podium div { width: 150px; }
-            .other-standings { grid-template-columns: repeat(2, 1fr); }
-        }
+    footer a {
+      color: #ff2d2d;
+      text-decoration: none;
+    }
 
-        #stars {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
-        }
+    footer a:hover {
+      text-decoration: underline;
+    }
 
-        .stars-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            min-height: 100vh;
-            pointer-events: none;
-        }
+    #stars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
 
-        .star {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: #ffffff;
-            border-radius: 50%;
-        }
-    </style>
+    .stars-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
+      pointer-events: none;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #ffffff;
+      border-radius: 50%;
+    }
+
+    @media (max-width: 768px) {
+      header img { width: 180px; }
+      .button-container {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .button {
+        font-size: 1.3rem; 
+        padding: 16px 42px; 
+        max-width: 100%;
+      }
+      .podium div {
+        width: 150px;
+      }
+      .other-standings {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
 </head>
 <body>
 
-    <div id="stars">
-        <div class="stars-overlay"></div>
-    </div>
+<div id="stars">
+  <div class="stars-overlay"></div>
+</div>
 
-    <div class="container">
-        <header>
-            <a href="https://kick.com/redhunllef">
-                <img src="/static/redlogo.png" alt="Redhunllef Logo">
-            </a>
-        </header>
+<div class="container">
+  <header>
+    <a href="https://kick.com/redhunllef">
+      <img src="/static/redlogo.png" alt="Redhunllef Logo">
+    </a>
+  </header>
 
-        <div id="sponsor-message">
-            <p>Support Redhunllef by visiting his sponsors below.</p>
-        </div>
+  <div id="sponsor-message">
+    <p>Support Redhunllef by visiting his sponsors below.</p>
+  </div>
 
-        <div class="button-container">
-            <a href="https://shuffle.com/?r=Red" class="button">Shuffle.com</a>
-            <a href="https://chicken.gg/r/Red" class="button">Chicken.gg</a>
-            <a href="https://runestake.com/r/red" class="button">Runestake.com</a>
-            <a href="https://csgostake.com/r/red" class="button">CSGOStake.com</a>
-        </div>
+  <div class="button-container">
+    <a href="https://shuffle.com/?r=Red" class="button">Shuffle.com</a>
+    <a href="https://chicken.gg/r/Red" class="button">Chicken.gg</a>
+    <a href="https://upgrader.com/r/RED" class="button">Upgrader.com</a>
+    <a href="https://rain.gg/r/Hunllef" class="button">Rain.gg</a>
+  </div>
 
-        <div class="wager-container">
-            <h2 class="wager-title">Shuffle.com Wager Race</h2>
+  <!-- Countdown until March 21, 2025, 3:00 AM UTC -->
+  <div id="race-timer">
+    <p>Time until the Wager Race ends: <span id="countdown"></span></p>
+  </div>
 
-            <div class="podium" id="top-3-standings">
-                <!-- Top 3 players will be dynamically inserted here -->
-            </div>
+  <div class="wager-container">
+    <h2 class="wager-title">Upgrader.com Wager Race</h2>
 
-            <div class="other-standings" id="wager-standings">
-                <!-- 4th to 11th place players will be dynamically inserted here -->
-            </div>
-        </div>
+    <div class="podium" id="top-3-standings"></div>
+    <div class="other-standings" id="wager-standings"></div>
+  </div>
 
-        <footer>
-            <p>&copy; 2024 Redhunllef Livestream. All Rights Reserved.</p>
-            <p>Built by <a href="https://kick.com/gingrsnaps" target="_blank">GingrSnaps</a></p>
-        </footer>
+  <footer>
+    <p>&copy; 2024 Redhunllef Livestream. All Rights Reserved.</p>
+    <p>Built by <a href="https://kick.com/gingrsnaps" target="_blank">GingrSnaps</a></p>
+  </footer>
+</div>
 
-    </div>
+<script>
+  // Prizes: 1st -> $300, 2nd/3rd -> $100, 4th -> $50, 5th/6th -> $25
+  const prizeMapping = {
+    1: "$300",
+    2: "$100",
+    3: "$100",
+    4: "$50",
+    5: "$25",
+    6: "$25"
+  };
 
-    <!-- JavaScript will populate the standings -->
-    <script>
-        /*
-          EXACT placeholder and data-fetching logic from your original index,
-          including the countdown or sponsor references if they were in your version.
+  // Placeholder data if the API is not reachable or returns an error
+  const placeholderData = {
+    top1:  { username: 'Player1',  wager: '$10,000' },
+    top2:  { username: 'Player2',  wager: '$8,500' },
+    top3:  { username: 'Player3',  wager: '$7,500' },
+    top4:  { username: 'Player4',  wager: '$7,000' },
+    top5:  { username: 'Player5',  wager: '$6,500' },
+    top6:  { username: 'Player6',  wager: '$6,000' },
+    top7:  { username: 'Player7',  wager: '$5,500' },
+    top8:  { username: 'Player8',  wager: '$5,000' },
+    top9:  { username: 'Player9',  wager: '$4,500' },
+    top10: { username: 'Player10', wager: '$4,000' },
+    top11: { username: 'Player11', wager: '$3,500' }
+  };
 
-          The key points:
-           - We fetch('/data') to get the scoreboard from chknrace.py
-           - Then we populate the podium (#top-3-standings) and .other-standings (#wager-standings)
+  function buildPodiumHTML([first, second, third]) {
+    return `
+      <div class="second">
+        <img src="/static/2nd.png" class="medal" alt="2nd Place Medal">
+        <h3>2nd: ${second.username}</h3>
+        <p>Wager: ${second.wager}</p>
+        <p>Prize: ${prizeMapping[2] || '—'}</p>
+      </div>
+      <div class="first">
+        <img src="/static/1st.png" class="medal first-medal" alt="1st Place Medal">
+        <h3>1st: ${first.username}</h3>
+        <p>Wager: ${first.wager}</p>
+        <p>Prize: ${prizeMapping[1] || '—'}</p>
+      </div>
+      <div class="third">
+        <img src="/static/3rd.png" class="medal" alt="3rd Place Medal">
+        <h3>3rd: ${third.username}</h3>
+        <p>Wager: ${third.wager}</p>
+        <p>Prize: ${prizeMapping[3] || '—'}</p>
+      </div>
+    `;
+  }
 
-          Keep any placeholderData, buildPodiumHTML, etc. identical to your prior logic
-          so it remains visually and functionally the same.
-        */
+  function populateWithData(data) {
+    const top3Container = document.getElementById('top-3-standings');
+    const standingsContainer = document.getElementById('wager-standings');
+    top3Container.innerHTML = '';
+    standingsContainer.innerHTML = '';
 
-        const placeholderData = {
-            top1:  { username: 'Player1',  wager: '$10,000' },
-            top2:  { username: 'Player2',  wager: '$8,500' },
-            top3:  { username: 'Player3',  wager: '$7,500' },
-            top4:  { username: 'Player4',  wager: '$7,000' },
-            top5:  { username: 'Player5',  wager: '$6,500' },
-            top6:  { username: 'Player6',  wager: '$6,000' },
-            top7:  { username: 'Player7',  wager: '$5,500' },
-            top8:  { username: 'Player8',  wager: '$5,000' },
-            top9:  { username: 'Player9',  wager: '$4,500' },
-            top10: { username: 'Player10', wager: '$4,000' },
-            top11: { username: 'Player11', wager: '$3,500' }
-        };
+    const first = data.top1 || placeholderData.top1;
+    const second = data.top2 || placeholderData.top2;
+    const third = data.top3 || placeholderData.top3;
 
-        function updateWagerRace() {
-            fetch('/data')
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Fetched data:", data);
-                    const top3Container = document.getElementById('top-3-standings');
-                    const standingsContainer = document.getElementById('wager-standings');
+    top3Container.innerHTML = buildPodiumHTML([first, second, third]);
 
-                    top3Container.innerHTML = '';
-                    standingsContainer.innerHTML = '';
+    for (let i = 4; i <= 11; i++) {
+      const rank = data[`top${i}`] || placeholderData[`top${i}`];
+      const placeText = (i <= 6)
+        ? `<p>Prize: ${prizeMapping[i] || '—'}</p>`
+        : '';
 
-                    // build top 3
-                    const first = data.top1 || placeholderData.top1;
-                    const second = data.top2 || placeholderData.top2;
-                    const third = data.top3 || placeholderData.top3;
+      const div = document.createElement('div');
+      div.classList.add('standing');
+      div.innerHTML = `
+        <h3>${i}th: ${rank.username}</h3>
+        <p>Wager: ${rank.wager}</p>
+        ${placeText}
+      `;
+      standingsContainer.appendChild(div);
+    }
+  }
 
-                    top3Container.innerHTML = `
-                        <div class="second">
-                            <img src="/static/2nd.png" class="medal" alt="2nd Place Medal">
-                            <h3>2nd: ${second.username}</h3>
-                            <p>Wager: ${second.wager}</p>
-                        </div>
-                        <div class="first">
-                            <img src="/static/1st.png" class="medal first-medal" alt="1st Place Medal">
-                            <h3>1st: ${first.username}</h3>
-                            <p>Wager: ${first.wager}</p>
-                        </div>
-                        <div class="third">
-                            <img src="/static/3rd.png" class="medal" alt="3rd Place Medal">
-                            <h3>3rd: ${third.username}</h3>
-                            <p>Wager: ${third.wager}</p>
-                        </div>
-                    `;
-
-                    for (let i = 4; i <= 11; i++) {
-                        const user = data[`top${i}`] || placeholderData[`top${i}`];
-                        const div = document.createElement('div');
-                        div.classList.add('standing');
-                        div.innerHTML = `<h3>${i}th: ${user.username}</h3><p>Wager: ${user.wager}</p>`;
-                        standingsContainer.appendChild(div);
-                    }
-                })
-                .catch(err => {
-                    console.error("Error fetching data:", err);
-                });
+  function updateWagerRace() {
+    fetch('/data')
+      .then(res => res.json())
+      .then(apiData => {
+        console.log('Fetched /data:', apiData);
+        if (apiData.error) {
+          // If there's an error in data_cache, we just use placeholder
+          populateWithData(placeholderData);
+        } else {
+          populateWithData(apiData);
         }
+      })
+      .catch(err => {
+        console.error('Error fetching /data:', err);
+        populateWithData(placeholderData);
+      });
+  }
 
-        // Example poll or setInterval logic
-        window.onload = function() {
-            updateWagerRace();
-            setInterval(updateWagerRace, 15 * 60 * 1000); // e.g. 15 minutes
-        };
+  function initializeCountdown() {
+    const countdownElem = document.getElementById('countdown');
+    const raceEnd = new Date('Mar 21, 2025 03:00:00 UTC').getTime();
 
-        // Star background logic
-        (function createStars() {
-            const starsContainer = document.querySelector('.stars-overlay');
-            const starsCount = 350;
-            const stars = [];
+    function updateTimer() {
+      const now = new Date().getTime();
+      const distance = raceEnd - now;
+      if (distance < 0) {
+        countdownElem.textContent = "Race has ended.";
+        return;
+      }
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      countdownElem.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  }
 
-            for (let i = 0; i < starsCount; i++) {
-                const star = document.createElement('div');
-                star.classList.add('star');
-                star.style.top = Math.random() * starsContainer.offsetHeight + 'px';
-                star.style.left = Math.random() * starsContainer.offsetWidth + 'px';
-                star.style.transform = `scale(${1 + Math.random() * 0.15})`;
-                starsContainer.appendChild(star);
-                stars.push(star);
-            }
+  function createStarField() {
+    const starsContainer = document.querySelector('.stars-overlay');
+    const starsCount = 300;
+    const stars = [];
+    for (let i = 0; i < starsCount; i++) {
+      const star = document.createElement('div');
+      star.classList.add('star');
+      star.style.top = Math.random() * starsContainer.offsetHeight + 'px';
+      star.style.left = Math.random() * starsContainer.offsetWidth + 'px';
+      starsContainer.appendChild(star);
+      stars.push(star);
+    }
+    if (window.innerWidth > 768) {
+      window.addEventListener('mousemove', e => {
+        const { clientX, clientY } = e;
+        stars.forEach(star => {
+          const xMovement = Math.min(Math.max((clientX - window.innerWidth / 2) / 75, -50), 50);
+          const yMovement = Math.min(Math.max((clientY - window.innerHeight / 2) / 75, -50), 50);
+          star.style.transform = `translate(${xMovement}px, ${yMovement}px)`;
+        });
+      });
+    }
+  }
 
-            if (window.innerWidth > 768) {
-                window.addEventListener('mousemove', (e) => {
-                    const { clientX, clientY } = e;
-                    stars.forEach(star => {
-                        const xMovement = Math.min(Math.max((clientX - window.innerWidth / 2) / 75, -50), 50);
-                        const yMovement = Math.min(Math.max((clientY - window.innerHeight / 2) / 75, -50), 50);
-                        star.style.transform = `translate(${xMovement}px, ${yMovement}px)`;
-                    });
-                });
-            }
-        })();
-    </script>
+  window.onload = function() {
+    createStarField();
+    initializeCountdown();
+    updateWagerRace();
+    setInterval(updateWagerRace, 900000); // refresh data every 15 mins
+  };
+</script>
 
 </body>
 </html>
